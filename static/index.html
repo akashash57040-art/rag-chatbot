@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG Chatbot</title>
+<style>
+  :root {
+    --bg: #1b1b1f;
+    --panel: #25252b;
+    --accent: #5b8def;
+    --text: #e8e8ec;
+    --muted: #8a8a94;
+    --user-bubble: #5b8def;
+    --bot-bubble: #2f2f37;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 16px 24px;
+    border-bottom: 1px solid #333;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.3px;
+  }
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .msg {
+    max-width: 70%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    line-height: 1.45;
+    font-size: 14.5px;
+    white-space: pre-wrap;
+  }
+  .user {
+    align-self: flex-end;
+    background: var(--user-bubble);
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+  .bot {
+    align-self: flex-start;
+    background: var(--bot-bubble);
+    border-bottom-left-radius: 4px;
+  }
+  .sources {
+    align-self: flex-start;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: -8px;
+    max-width: 70%;
+  }
+  #input-area {
+    display: flex;
+    gap: 10px;
+    padding: 16px 24px;
+    border-top: 1px solid #333;
+  }
+  #input-area input {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid #3a3a42;
+    background: var(--panel);
+    color: var(--text);
+    font-size: 14.5px;
+    outline: none;
+  }
+  #input-area input:focus { border-color: var(--accent); }
+  #input-area button {
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #input-area button:disabled { opacity: 0.5; cursor: default; }
+  .typing { color: var(--muted); font-style: italic; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<header>RAG Chatbot — ask questions about your documents</header>
+<div id="chat"></div>
+
+<div id="input-area">
+  <input id="input" type="text" placeholder="Ask something about your documents..." />
+  <button id="send">Send</button>
+</div>
+
+<script>
+const chatEl = document.getElementById('chat');
+const inputEl = document.getElementById('input');
+const sendBtn = document.getElementById('send');
+
+let history = []; // {role, content}
+
+function addMessage(role, text) {
+  const div = document.createElement('div');
+  div.className = `msg ${role === 'user' ? 'user' : 'bot'}`;
+  div.textContent = text;
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+  return div;
+}
+
+function addSources(sources) {
+  if (!sources || sources.length === 0) return;
+  const div = document.createElement('div');
+  div.className = 'sources';
+  div.textContent = 'Sources: ' + sources.join(', ');
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+async function sendMessage() {
+  const text = inputEl.value.trim();
+  if (!text) return;
+
+  addMessage('user', text);
+  inputEl.value = '';
+  sendBtn.disabled = true;
+
+  const typingEl = addMessage('bot', 'Thinking...');
+  typingEl.classList.add('typing');
+
+  try {
+    const res = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, history })
+    });
+    const data = await res.json();
+
+    typingEl.classList.remove('typing');
+    typingEl.textContent = data.answer;
+    addSources(data.sources);
+
+    history.push({ role: 'user', content: text });
+    history.push({ role: 'assistant', content: data.answer });
+  } catch (err) {
+    typingEl.textContent = 'Error reaching the server. Is the backend running?';
+  } finally {
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }
+}
+
+sendBtn.addEventListener('click', sendMessage);
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendMessage();
+});
+</script>
+
+</body>
+</html>
