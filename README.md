@@ -6,6 +6,7 @@ A Retrieval-Augmented Generation (RAG) chatbot that answers questions grounded i
 ![FastAPI](https://img.shields.io/badge/FastAPI-backend-teal)
 ![Chroma](https://img.shields.io/badge/ChromaDB-vector%20store-orange)
 ![Ollama](https://img.shields.io/badge/Ollama-local%20LLM-black)
+![Chat UI Screenshot](screenshot.png)
 
 ## Why this project
 
